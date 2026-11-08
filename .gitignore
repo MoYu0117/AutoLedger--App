@@ -1,0 +1,24 @@
+# ==== 敏感文件（绝不能上传）====
+# 签名证书与密码
+keystore/
+key.properties
+
+# 本地 SDK 路径
+local.properties
+
+# ==== 构建产物 ====
+.gradle/
+build/
+app/build/
+.kotlin/
+
+# ==== IDE ====
+.idea/
+*.iml
+
+# ==== 系统 ====
+.DS_Store
+Thumbs.db
+
+# ==== 日志 ====
+*.log

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 只提供一个无标题栏的系统主题，界面全部由 Compose 绘制 -->
+    <style name="Theme.AutoLedger" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#FFF8FAF8</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#FFF8FAF8</item>
+        <item name="android:windowBackground">#FFF8FAF8</item>
+    </style>
+</resources>
