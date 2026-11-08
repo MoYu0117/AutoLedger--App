@@ -106,7 +106,6 @@ fun HomeScreen(
             HeroCard(
                 expense = expense,
                 income = income,
-                count = monthTx.size,
                 page = page,
                 onCyclePage = { page = (page + 1) % 3 },
                 hidden = hidden,
@@ -210,7 +209,6 @@ fun HomeScreen(
 private fun HeroCard(
     expense: Long,
     income: Long,
-    count: Int,
     page: Int,
     onCyclePage: () -> Unit,
     hidden: Boolean,
@@ -218,28 +216,44 @@ private fun HeroCard(
     onAdd: () -> Unit,
 ) {
     val balance = income - expense
-    val label = when (page) {
-        1 -> "本月收入"
-        2 -> "本月结余"
-        else -> "本月支出"
-    }
-    val amount = when (page) {
-        1 -> income
-        2 -> balance
-        else -> expense
-    }
-    val amountColor = when (page) {
-        1 -> IncomeColor
-        2 -> if (balance < 0) ExpenseColor else IncomeColor
-        else -> ExpenseColor
+
+    // 三个口径「支出 / 收入 / 结余」轮流占据主位，其余两个固定排在下方两栏。
+    // 点箭头只是调换顺序，金额一律用黑色。
+    val mainLabel: String
+    val mainValue: Long
+    val leftLabel: String
+    val leftValue: Long
+    val rightLabel: String
+    val rightValue: Long
+    when (page) {
+        1 -> {
+            mainLabel = "本月收入"; mainValue = income
+            leftLabel = "月结余"; leftValue = balance
+            rightLabel = "本月支出"; rightValue = expense
+        }
+        2 -> {
+            mainLabel = "月结余"; mainValue = balance
+            leftLabel = "本月支出"; leftValue = expense
+            rightLabel = "本月收入"; rightValue = income
+        }
+        else -> {
+            mainLabel = "本月支出"; mainValue = expense
+            leftLabel = "本月收入"; leftValue = income
+            rightLabel = "月结余"; rightValue = balance
+        }
     }
 
-    // 下一行跟着口径一起轮替：支出→看收入，收入→看支出，结余→看收支两侧
-    val moneyText: (Long) -> String = { v -> if (hidden) "••••" else Money.centsToYuan(v) }
-    val subtitle = when (page) {
-        0 -> "本月收入 ${moneyText(income)} · 共 $count 笔"
-        1 -> "本月支出 ${moneyText(expense)} · 共 $count 笔"
-        else -> "收入 ${moneyText(income)} · 支出 ${moneyText(expense)}"
+    // 标签用语义色，金额数字统一黑色
+    val mainLabelColor = when (mainLabel) {
+        "本月支出" -> ExpenseColor
+        "本月收入" -> IncomeColor
+        else -> if (balance < 0) ExpenseColor else if (balance > 0) IncomeColor else TextSub
+    }
+
+    fun fmt(v: Long): String {
+        if (hidden) return "••••"
+        val a = Money.centsToYuan(abs(v))
+        return if (v < 0) "-$a" else a
     }
 
     Surface(
@@ -251,13 +265,13 @@ private fun HeroCard(
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    label,
+                    mainLabel,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (page == 0) ExpenseColor else if (page == 1) IncomeColor else TextSub,
+                    color = mainLabelColor,
                 )
                 Spacer(Modifier.width(8.dp))
-                // 切换箭头：点一下换下一个口径
+                // 切换按钮：点一下把三个口径轮流调换顺序
                 Box(
                     modifier = Modifier
                         .size(26.dp)
@@ -289,28 +303,53 @@ private fun HeroCard(
                     "¥",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Medium,
-                    color = amountColor,
+                    color = TextMain,
                     modifier = Modifier.padding(bottom = 5.dp),
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = if (hidden) "••••" else {
-                        val v = Money.centsToYuan(abs(amount))
-                        if (amount < 0) "-$v" else v
+                        val v = Money.centsToYuan(abs(mainValue))
+                        if (mainValue < 0) "-$v" else v
                     },
                     fontSize = 38.sp,
                     fontWeight = FontWeight.Bold,
-                    color = amountColor,
+                    color = TextMain,
                 )
             }
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(12.dp))
 
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSub,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        leftLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSub,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        fmt(leftValue),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextMain,
+                    )
+                }
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                    Text(
+                        rightLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSub,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        fmt(rightValue),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextMain,
+                    )
+                }
+            }
 
             Spacer(Modifier.height(16.dp))
 

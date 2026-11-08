@@ -115,6 +115,7 @@ fun StatsScreen(
         if (mode == 0) {
             HorizontalPager(
                 state = pagerState,
+                reverseLayout = true,
                 modifier = Modifier.weight(1f),
             ) { page ->
                 val m = remember(page) { YearMonth.now().minusMonths(page.toLong()) }

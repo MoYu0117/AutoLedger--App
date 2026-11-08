@@ -18,8 +18,8 @@ android {
         applicationId = "com.xtgxiso.autoledger"
         minSdk = 26          // Android 8.0 起，JAVA 8 时间 API、通知接口都齐全
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.3.0"
+        versionCode = 7
+        versionName = "1.3.1"
     }
 
     // 读取 key.properties 做正式签名；文件不存在时自动降级为 debug 签名（自己用完全够）
