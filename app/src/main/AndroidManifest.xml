@@ -10,7 +10,8 @@
     <!-- 用于拉起「电池优化白名单」授权弹窗，属于保活必需 -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- 注意：没有 INTERNET 权限。App 全程离线，装完也不联网 -->
+    <!-- 联网检查新版本：读取 Gitee 仓库根目录 version.json（只读，不采集任何数据） -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".AutoLedgerApp"
