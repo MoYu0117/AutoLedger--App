@@ -1,6 +1,6 @@
 {
   "versionCode": 8,
   "versionName": "1.4.0",
-  "downloadUrl": "",
+  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4/AutoLedger-v1.4.0.apk",
   "note": "新增识图记账、修复朋友消息误记、未识别商户改为微信支付/支付宝"
 }

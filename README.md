@@ -27,6 +27,15 @@
 
 ## 更新记录
 
+### v1.4.0
+| 项 | 变化 |
+|---|---|
+| 识图记账 | 主页顶部新增「识图」按钮，导入账单截图 → **本地离线 OCR 识别**（图片不出手机、不联网）→ 列出候选账单可逐条勾选 → 确认入账；多账单流水按「一行一条」切分 |
+| 未识别商户 | 只有金额、解析不出商户时，自动按来源填「微信支付 / 支付宝」，不再显示「未识别商户」 |
+| 误记修复 | 解析前先校验通知来源，只有「微信支付/支付宝」等支付服务通知才处理，朋友聊天消息不再误记成假账单 |
+| APK 命名 | 产物改为 `AutoLedger-vX.Y.Z.apk`（带版本号），不再叫 `app-release.apk` |
+| 体积 | 因内置中文 OCR 模型，APK 约 52MB（本地离线识别的代价） |
+
 ### v1.3.1
 | 项 | 变化 |
 |---|---|
@@ -112,7 +121,7 @@
 ./gradlew assembleRelease
 ```
 
-产物：`app/build/outputs/apk/release/app-release.apk`（约 10MB）
+产物：`app/build/outputs/apk/release/AutoLedger-v1.4.0.apk`（约 52MB，含本地 OCR 模型）
 
 **从 v1.0 升级到 v1.1 要注意**：v1.0 装的是 debug 签名包，和这个正式签名不是同一个证书，系统会拒绝覆盖安装（报 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`）。
 所以第一次要把旧版**卸载**再装新版（会清掉 v1.0 的测试数据）。从 v1.1 往后，只要 keystore 不变，都能直接覆盖升级、数据保留。
@@ -188,12 +197,18 @@ app/src/main/java/com/xtgxiso/autoledger/
 │   └── PaymentNotificationListener.kt  通知监听服务
 ├── update/
 │   └── UpdateChecker.kt    联网检查新版本（读云端 version.json，静默失败）
+├── ocr/
+│   ├── OcrEngine.kt        本地 OCR 识别（ML Kit 中文模型，离线）
+│   └── OcrBillParser.kt    把 OCR 文字解析成多条候选账单（商户+金额+方向+日期）
 ├── ui/
-│   ├── AppRoot.kt              3 个 Tab 的骨架
-│   ├── HomeScreen.kt           账单列表 + 月度汇总
-│   ├── StatsScreen.kt          分类占比环形图 + 分类明细
+│   ├── AppRoot.kt              4 个 Tab 的骨架
+│   ├── HomeScreen.kt           首页卡片 + 近三日账单
+│   ├── BillsScreen.kt          账单页（月汇总/柱状图/明细）
+│   ├── StatsScreen.kt          报表页（环形图/日历）
+│   ├── OcrImportScreen.kt      识图导入（选图→识别→勾选→入账）
 │   ├── SettingsScreen.kt       权限/监听应用/规则/保活/数据
 │   ├── EditScreen.kt           记一笔 / 编辑 / 删除
+│   ├── Pickers.kt              滚轮选择器 / 月份选择器
 │   ├── Common.kt               公共组件与权限状态 Hook
 │   ├── LedgerViewModel.kt      全部业务状态
 │   └── theme/Theme.kt          配色
@@ -217,7 +232,7 @@ app/src/main/java/com/xtgxiso/autoledger/
 改一次代码、发一个新版本，照着下面 5 步走（版本号以 v1.3.1 → v1.4.0 为例）：
 
 1. **改版本号**：`app/build.gradle.kts` 里 `versionCode`（+1）和 `versionName` 改新值。
-2. **编译**：`./gradlew assembleRelease`，产物在 `app/build/outputs/apk/release/app-release.apk`。
-3. **上传发行版**：Gitee 仓库 →「发行版/Release」→ 新建，标签填新版本号（如 `v1.4.0`），上传 APK 附件，复制下载直链（格式 `https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4.0/app-release.apk`）。
+2. **编译**：`./gradlew assembleRelease`，产物在 `app/build/outputs/apk/release/AutoLedger-vX.Y.Z.apk`。
+3. **上传发行版**：Gitee 仓库 →「发行版/Release」→ 新建，标签填新版本号（如 `v1.4`），上传 APK 附件，复制下载直链（格式 `https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4/AutoLedger-v1.4.0.apk`）。
 4. **更新 version.json**：把 `versionCode`/`versionName` 改成新值，`downloadUrl` 填第 3 步的直链，`note` 写更新说明。
 5. **推送**：`git push`。之后所有老用户打开 App 就会自动弹「发现新版本」。
