@@ -118,7 +118,9 @@
 | 文件 | 位置 | 说明 |
 |---|---|---|
 | 证书 | `keystore/autoledger.jks` | 有效期 30 年（到 2056 年） |
-| 口令 | `key.properties` | storePassword / keyPassword 都是 `autoledger2026`，想改就同时改两处 |
+| 口令 | `key.properties` | storePassword / keyPassword 已写入本文件（**不公开**，见下方安全说明） |
+
+> 🔒 **安全说明**：`keystore/` 和 `key.properties` 两个文件都在 `.gitignore` 里，**不会被提交到仓库**，也不会公开。签名口令只存在于你本机的 `key.properties`，请勿把口令写进任何提交的内容里。
 
 ⚠️ **这两个文件一定要备份到网盘或 U 盘**。丢了就再也签不出同一签名的包，只能卸载重装，账目数据会一起清空。
 
