@@ -1,6 +1,6 @@
 {
   "versionCode": 9,
   "versionName": "1.4.1",
-  "downloadUrl": "",
+  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4.1/AutoLedger-v1.4.1.apk",
   "note": "识图记账优化：正确识别收支方向与具体时间、商户名更准，识别结果可逐条编辑"
 }
