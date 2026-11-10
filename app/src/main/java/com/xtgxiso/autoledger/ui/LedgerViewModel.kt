@@ -109,6 +109,11 @@ class LedgerViewModel(private val app: AutoLedgerApp) : ViewModel() {
     // ——— 账目操作 ———
     fun save(item: Transaction) = viewModelScope.launch { repo.save(item) }
 
+    /** 批量保存（识图导入用） */
+    fun saveAll(items: List<Transaction>) = viewModelScope.launch {
+        items.forEach { repo.save(it) }
+    }
+
     fun confirm(item: Transaction) = viewModelScope.launch { repo.confirm(item) }
 
     fun delete(item: Transaction) = viewModelScope.launch { repo.delete(item) }

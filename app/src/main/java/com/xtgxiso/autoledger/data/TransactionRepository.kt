@@ -57,7 +57,7 @@ class TransactionRepository(
         postedAt: Long,
     ): IngestResult {
         val rules = ruleDao.enabledOnce()
-        val parsed = NotificationParser.parse(title, text, rules) ?: return IngestResult.Unparsed
+        val parsed = NotificationParser.parse(title, text, rules, source) ?: return IngestResult.Unparsed
 
         val window = settings.dedupeWindowMillis()
         val duplicate = transactionDao.findDuplicate(

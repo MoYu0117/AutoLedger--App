@@ -18,8 +18,8 @@ android {
         applicationId = "com.xtgxiso.autoledger"
         minSdk = 26          // Android 8.0 起，JAVA 8 时间 API、通知接口都齐全
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.3.1"
+        versionCode = 8
+        versionName = "1.4.0"
     }
 
     // 读取 key.properties 做正式签名；文件不存在时自动降级为 debug 签名（自己用完全够）
@@ -67,6 +67,17 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // 自定义 APK 输出文件名：AutoLedger-v1.4.0.apk（不再叫 app-release.apk）
+    // 注意：版本号改 versionName 时，这里也同步改一下
+    androidComponents {
+        onVariants(selector().all()) { variant ->
+            variant.outputs.forEach { output ->
+                (output as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName =
+                    "AutoLedger-v1.4.0.apk"
+            }
+        }
+    }
 }
 
 dependencies {
@@ -85,5 +96,11 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // 本地 OCR 识图（离线、免费、图片不出手机）。用中文模型，体积约 +3MB
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+    // ML Kit 的 Task 转协程 await
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

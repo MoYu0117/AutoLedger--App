@@ -22,8 +22,18 @@ data class ParseResult(
  */
 object NotificationParser {
 
+    /** 微信 / 支付宝 的包名，用于来源兜底和来源校验 */
+    const val SOURCE_WECHAT = "com.tencent.mm"
+    const val SOURCE_ALIPAY = "com.eg.android.AlipayGphone"
+
     /** 这些标题太泛，不能当商户名 */
     private val genericTitles = setOf("支付宝", "微信支付", "微信", "WeChat", "支付通知", "服务通知")
+
+    /**
+     * 标题里出现这些，才被认为是「微信支付 / 支付宝」的官方支付通知，
+     * 而不是微信好友发来的普通聊天消息（那种标题是对方昵称，会误记成假账单）。
+     */
+    private val paymentServiceTitles = listOf("微信支付", "支付宝", "支付成功", "收款", "付款", "账单", "消费")
 
     /** 金额写法，按优先级匹配（¥ 符号最可靠，其次 "xx元"，最后是"支出 25.8" 这种） */
     private val amountPatterns: List<Pair<String, Regex>> = listOf(
@@ -50,9 +60,14 @@ object NotificationParser {
         title: String,
         text: String,
         rules: List<RuleEntity> = emptyList(),
+        source: String = "",
     ): ParseResult? {
         val full = "$title $text".trim()
         if (full.isBlank()) return null
+
+        // 0) 来源校验：只认微信支付/支付宝官方通知，避免好友消息被误记。
+        //    微信好友消息的标题是对方昵称（如「堆花酒」），不包含支付服务关键字 → 直接忽略。
+        if (!isPaymentNotification(title)) return null
 
         // 1) 金额：按优先级找第一个能解析出正数的
         var amountCents: Long? = null
@@ -93,7 +108,7 @@ object NotificationParser {
             merchant = if (t.isNotBlank() && genericTitles.none { g -> t.contains(g) }) t else null
         }
         val payee = merchant?.trim()?.trim(',', '，', '。', '.', '：', ':', '-', ' ')?.takeIf { it.isNotBlank() }
-            ?: "未识别商户"
+            ?: fallbackPayee(source)
 
         // 4) 分类：按规则表顺序，命中第一个就用它
         val category = rules.firstOrNull { rule ->
@@ -111,5 +126,24 @@ object NotificationParser {
             category = category,
             matchedPattern = patternName,
         )
+    }
+
+    /**
+     * 解析不出商户名时的兜底：按来源填「微信支付 / 支付宝」，而不是「未识别商户」。
+     */
+    private fun fallbackPayee(source: String): String = when {
+        source == SOURCE_WECHAT -> "微信支付"
+        source == SOURCE_ALIPAY -> "支付宝"
+        else -> "未识别商户"
+    }
+
+    /**
+     * 判断这条通知是不是「支付服务」发的，而不是普通聊天消息。
+     * 依据：标题里是否出现支付服务关键字。微信好友消息标题是昵称，通常不含这些字。
+     */
+    private fun isPaymentNotification(title: String): Boolean {
+        val t = title.trim()
+        if (t.isBlank()) return false
+        return paymentServiceTitles.any { t.contains(it) }
     }
 }

@@ -49,6 +49,7 @@ fun AppRoot() {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf<Transaction?>(null) }
     var creating by remember { mutableStateOf(false) }
+    var ocrOpen by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
 
     // 启动后联网检查一次：云端 versionCode 比本地大才弹「是否更新」
@@ -66,6 +67,17 @@ fun AppRoot() {
             onUpdate = { updateInfo = null },
             onLater = { updateInfo = null },
         )
+    }
+
+    if (ocrOpen) {
+        OcrImportScreen(
+            onDismiss = { ocrOpen = false },
+            onSave = { txs ->
+                vm.saveAll(txs)
+                ocrOpen = false
+            },
+        )
+        return
     }
 
     if (creating || editing != null) {
@@ -107,6 +119,7 @@ fun AppRoot() {
                     onOpen = { editing = it },
                     onOpenBills = { tab = 1 },
                     onOpenSettings = { tab = 3 },
+                    onOpenOcr = { ocrOpen = true },
                 )
                 1 -> BillsScreen(vm = vm, onOpen = { editing = it })
                 2 -> StatsScreen(vm = vm, onAdd = { creating = true }, onOpen = { editing = it })

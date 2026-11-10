@@ -1,6 +1,6 @@
 {
-  "versionCode": 7,
-  "versionName": "1.3.1",
-  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.3.1/app-release.apk",
-  "note": "首页金额统一黑色、三态轮换；账单/报表滑动方向调整"
+  "versionCode": 8,
+  "versionName": "1.4.0",
+  "downloadUrl": "",
+  "note": "新增识图记账、修复朋友消息误记、未识别商户改为微信支付/支付宝"
 }

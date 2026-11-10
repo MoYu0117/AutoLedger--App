@@ -67,6 +67,7 @@ fun HomeScreen(
     onOpen: (Transaction) -> Unit,
     onOpenBills: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenOcr: () -> Unit,
 ) {
     val monthTx by vm.currentMonthTx.collectAsStateWithLifecycle()
     val recent by vm.recentTx.collectAsStateWithLifecycle()
@@ -95,6 +96,13 @@ fun HomeScreen(
                     color = TextMain,
                     modifier = Modifier.weight(1f),
                 )
+                PillButton(
+                    text = "识图",
+                    onClick = onOpenOcr,
+                    background = Color.White.copy(alpha = 0.5f),
+                    contentColor = TextMain,
+                )
+                Spacer(Modifier.width(8.dp))
                 PillButton(
                     text = "设置",
                     onClick = onOpenSettings,
