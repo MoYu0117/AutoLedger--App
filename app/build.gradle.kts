@@ -18,8 +18,8 @@ android {
         applicationId = "com.xtgxiso.autoledger"
         minSdk = 26          // Android 8.0 起，JAVA 8 时间 API、通知接口都齐全
         targetSdk = 34
-        versionCode = 8
-        versionName = "1.4.0"
+        versionCode = 9
+        versionName = "1.4.1"
     }
 
     // 读取 key.properties 做正式签名；文件不存在时自动降级为 debug 签名（自己用完全够）
@@ -68,13 +68,13 @@ android {
         }
     }
 
-    // 自定义 APK 输出文件名：AutoLedger-v1.4.0.apk（不再叫 app-release.apk）
+    // 自定义 APK 输出文件名：AutoLedger-v1.4.1.apk（不再叫 app-release.apk）
     // 注意：版本号改 versionName 时，这里也同步改一下
     androidComponents {
         onVariants(selector().all()) { variant ->
             variant.outputs.forEach { output ->
                 (output as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName =
-                    "AutoLedger-v1.4.0.apk"
+                    "AutoLedger-v1.4.1.apk"
             }
         }
     }

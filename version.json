@@ -1,6 +1,6 @@
 {
-  "versionCode": 8,
-  "versionName": "1.4.0",
-  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4/AutoLedger-v1.4.0.apk",
-  "note": "新增识图记账、修复朋友消息误记、未识别商户改为微信支付/支付宝"
+  "versionCode": 9,
+  "versionName": "1.4.1",
+  "downloadUrl": "",
+  "note": "识图记账优化：正确识别收支方向与具体时间、商户名更准，识别结果可逐条编辑"
 }
