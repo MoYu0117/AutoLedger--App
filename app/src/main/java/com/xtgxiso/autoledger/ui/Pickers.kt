@@ -62,8 +62,10 @@ fun WheelPicker(
     val fling = rememberSnapFlingBehavior(lazyListState = listState)
     val selectedIndex = items.indexOf(selected).coerceIn(0, items.lastIndex)
 
-    // 初始定位：滚动偏移 = selectedIndex * itemHeight 时该项正好居中
-    LaunchedEffect(Unit) {
+    // 关键修复：当外部 selected 变化时，把滚动定位到对应项（先 scroll 到 index-1 使该项居中）。
+    // 之前只跑一次(Unit)，导致 selected 变化后滚轮不跟随，centerIndex 又反复回调 onSelected，
+    // 出现「数值不断倒退」的 bug。
+    LaunchedEffect(selectedIndex) {
         if (selectedIndex > 0) listState.scrollToItem(selectedIndex - 1)
     }
 
@@ -80,6 +82,7 @@ fun WheelPicker(
         }
     }
 
+    // 只有当中心项发生变化时才回传，且用「值」而非 index 判断，避免 selected 被反复改写导致回退
     LaunchedEffect(centerIndex) {
         items.getOrNull(centerIndex)?.let { if (it != selected) onSelected(it) }
     }

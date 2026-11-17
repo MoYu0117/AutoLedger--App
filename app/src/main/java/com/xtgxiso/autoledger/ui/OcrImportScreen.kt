@@ -362,14 +362,17 @@ private fun EditOcrBillDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, Long, Boolean, LocalDate?, LocalTime?) -> Unit,
 ) {
+    // 初始值来自识别出的 date/time，正确回显如「2026年11月15日 8:51」
+    val initDate = bill.date ?: LocalDate.now()
+    val initTime = bill.time ?: LocalTime.of(12, 0)
     var payee by remember { mutableStateOf(bill.payee) }
     var amountText by remember { mutableStateOf(Money.centsToYuan(bill.amountCents)) }
     var isExpense by remember { mutableStateOf(bill.isExpense) }
-    var year by remember { mutableIntStateOf((bill.date ?: LocalDate.now()).year) }
-    var month by remember { mutableIntStateOf((bill.date ?: LocalDate.now()).monthValue) }
-    var day by remember { mutableIntStateOf((bill.date ?: LocalDate.now()).dayOfMonth) }
-    var hour by remember { mutableIntStateOf((bill.time ?: LocalTime.of(12, 0)).hour) }
-    var minute by remember { mutableIntStateOf((bill.time ?: LocalTime.of(12, 0)).minute) }
+    var year by remember { mutableIntStateOf(initDate.year) }
+    var month by remember { mutableIntStateOf(initDate.monthValue) }
+    var day by remember { mutableIntStateOf(initDate.dayOfMonth) }
+    var hour by remember { mutableIntStateOf(initTime.hour) }
+    var minute by remember { mutableIntStateOf(initTime.minute) }
     var amountError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
@@ -411,7 +414,7 @@ private fun EditOcrBillDialog(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    WheelPicker(items = (2000..2100).toList(), selected = year, onSelected = { year = it }, modifier = Modifier.weight(1f), format = { "$it" })
+                    WheelPicker(items = (2015..LocalDate.now().year).toList(), selected = year, onSelected = { year = it }, modifier = Modifier.weight(1f), format = { "$it" })
                     Text("年", color = TextSub)
                     WheelPicker(items = (1..12).toList(), selected = month, onSelected = { month = it }, modifier = Modifier.weight(0.8f))
                     Text("月", color = TextSub)

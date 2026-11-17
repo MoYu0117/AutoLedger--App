@@ -10,6 +10,7 @@ import com.xtgxiso.autoledger.data.RuleEntity
 import com.xtgxiso.autoledger.data.Transaction
 import com.xtgxiso.autoledger.parse.ParseResult
 import com.xtgxiso.autoledger.util.Dates
+import com.xtgxiso.autoledger.widget.LedgerWidgetProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,18 +108,31 @@ class LedgerViewModel(private val app: AutoLedgerApp) : ViewModel() {
     fun canGoNext(): Boolean = _month.value < YearMonth.now()
 
     // ——— 账目操作 ———
-    fun save(item: Transaction) = viewModelScope.launch { repo.save(item) }
+    fun save(item: Transaction) = viewModelScope.launch {
+        repo.save(item)
+        LedgerWidgetProvider.refreshAll(app)
+    }
 
     /** 批量保存（识图导入用） */
     fun saveAll(items: List<Transaction>) = viewModelScope.launch {
         items.forEach { repo.save(it) }
+        LedgerWidgetProvider.refreshAll(app)
     }
 
-    fun confirm(item: Transaction) = viewModelScope.launch { repo.confirm(item) }
+    fun confirm(item: Transaction) = viewModelScope.launch {
+        repo.confirm(item)
+        LedgerWidgetProvider.refreshAll(app)
+    }
 
-    fun delete(item: Transaction) = viewModelScope.launch { repo.delete(item) }
+    fun delete(item: Transaction) = viewModelScope.launch {
+        repo.delete(item)
+        LedgerWidgetProvider.refreshAll(app)
+    }
 
-    fun clearAll() = viewModelScope.launch { repo.clearAll() }
+    fun clearAll() = viewModelScope.launch {
+        repo.clearAll()
+        LedgerWidgetProvider.refreshAll(app)
+    }
 
     fun deleteBefore(threshold: Long) = viewModelScope.launch { repo.deleteBefore(threshold) }
 

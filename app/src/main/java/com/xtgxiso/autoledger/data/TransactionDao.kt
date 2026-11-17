@@ -24,6 +24,10 @@ interface TransactionDao {
     )
     fun observeSince(from: Long, status: Int): Flow<List<Transaction>>
 
+    /** 小组件：今日收支一次性读取（confirm 状态） */
+    @Query("SELECT * FROM transactions WHERE status = :status AND time >= :from AND time < :to")
+    suspend fun getRangeOnce(from: Long, to: Long, status: Int): List<Transaction>
+
     @Query("SELECT * FROM transactions WHERE id = :id")
     suspend fun getById(id: Long): Transaction?
 

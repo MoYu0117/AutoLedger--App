@@ -31,6 +31,10 @@ class TransactionRepository(
 
     fun observeCount(): Flow<Int> = transactionDao.observeCount()
 
+    /** 小组件：读今日收支 */
+    suspend fun todayRange(from: Long, to: Long): List<Transaction> =
+        transactionDao.getRangeOnce(from, to, Transaction.CONFIRMED)
+
     fun observeRules(): Flow<List<RuleEntity>> = ruleDao.observeAll()
 
     suspend fun enabledRules(): List<RuleEntity> = ruleDao.enabledOnce()

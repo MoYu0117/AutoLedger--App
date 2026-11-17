@@ -22,15 +22,21 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        val openAdd = intent.getBooleanExtra(EXTRA_OPEN_ADD, false)
         setContent {
             AutoLedgerTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    AppRoot()
+                    AppRoot(openAddOnLaunch = openAdd)
                 }
             }
         }
+    }
+
+    companion object {
+        /** 小组件「+」按钮：打开 App 后直接进入记一笔页 */
+        const val EXTRA_OPEN_ADD = "open_add"
     }
 }

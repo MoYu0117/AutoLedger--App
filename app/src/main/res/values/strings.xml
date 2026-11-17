@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">自动记账</string>
     <string name="listener_label">自动记账 · 支付通知读取</string>
+    <string name="widget_desc">自动记账 · 今日收支小组件</string>
 </resources>

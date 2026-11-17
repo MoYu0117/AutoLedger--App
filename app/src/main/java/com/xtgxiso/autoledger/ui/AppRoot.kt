@@ -44,11 +44,11 @@ import com.xtgxiso.autoledger.update.UpdateChecker
  * 编辑页以「整页盖上来」的方式显示，页面少，不引入 Navigation 组件。
  */
 @Composable
-fun AppRoot() {
+fun AppRoot(openAddOnLaunch: Boolean = false) {
     val vm: LedgerViewModel = viewModel(factory = LedgerViewModel.Factory)
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf<Transaction?>(null) }
-    var creating by remember { mutableStateOf(false) }
+    var creating by remember { mutableStateOf(openAddOnLaunch) }
     var ocrOpen by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
 

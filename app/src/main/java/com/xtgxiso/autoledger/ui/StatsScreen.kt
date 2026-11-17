@@ -501,11 +501,9 @@ private fun androidx.compose.foundation.layout.ColumnScope.CalendarBody(
                                     DayCell(
                                         day = day,
                                         label = cellLabel(day, metric, expenseByDay, incomeByDay),
-                                        labelColor = when (metric) {
-                                            1 -> IncomeColor
-                                            2 -> if ((incomeByDay[day] ?: 0L) - (expenseByDay[day] ?: 0L) < 0) ExpenseColor else IncomeColor
-                                            else -> ExpenseColor
-                                        },
+                                        labelColor = TextMain,
+                                        metric = metric,
+                                        hasValue = cellHasValue(day, metric, expenseByDay, incomeByDay),
                                         selected = day == selectedDay,
                                         onClick = { selectedDay = day },
                                     )
@@ -521,13 +519,13 @@ private fun androidx.compose.foundation.layout.ColumnScope.CalendarBody(
 
         item {
             WhiteCard {
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "月支出：¥" + Money.centsToYuan(monthExpense),
                         style = MaterialTheme.typography.bodyMedium,
                         color = ExpenseColor,
-                        modifier = Modifier.weight(1f),
                     )
+                    Spacer(Modifier.width(18.dp))
                     Text(
                         "日均支出：¥" + Money.centsToYuan(avg),
                         style = MaterialTheme.typography.bodyMedium,
@@ -614,16 +612,41 @@ private fun cellLabel(
     }
 }
 
+/** 该天在当前 metric 下是否有数据（决定背景是否加深） */
+private fun cellHasValue(
+    day: Int,
+    metric: Int,
+    expenseByDay: Map<Int, Long>,
+    incomeByDay: Map<Int, Long>,
+): Boolean {
+    val exp = expenseByDay[day] ?: 0L
+    val inc = incomeByDay[day] ?: 0L
+    return when (metric) {
+        1 -> inc > 0
+        2 -> (inc - exp) != 0L
+        else -> exp > 0
+    }
+}
+
 @Composable
 private fun DayCell(
     day: Int,
     label: String,
     labelColor: Color,
+    metric: Int,
+    hasValue: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    // 背景色：支出栏淡粉、有数据加深；收入栏默认透明、有数据淡色加深；结余栏始终不变
+    val bg = when {
+        selected -> Mint
+        metric == 0 -> if (hasValue) Color(0xFFF7D7D7) else Color(0xFFFBE9E9) // 支出：淡粉
+        metric == 1 -> if (hasValue) Color(0xFFD7F0E3) else Color.Transparent   // 收入：有数据淡绿
+        else -> Color.Transparent                                              // 结余：不变
+    }
     Surface(
-        color = if (selected) Mint else MintSoft.copy(alpha = 0.45f),
+        color = bg,
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .padding(2.dp)
@@ -640,14 +663,15 @@ private fun DayCell(
             Text(
                 day.toString(),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Bold, // 日期始终粗体
                 color = if (selected) Color.White else TextMain,
             )
             if (label.isNotEmpty()) {
                 Text(
                     label,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) Color.White else labelColor,
+                    color = if (selected) Color.White else TextMain, // 金额始终黑色（非粗体）
+                    fontWeight = FontWeight.Normal,
                     maxLines = 1,
                 )
             }

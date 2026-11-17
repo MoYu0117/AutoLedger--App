@@ -328,35 +328,36 @@ private fun HeroCard(
 
             Spacer(Modifier.height(12.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        leftLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSub,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        fmt(leftValue),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextMain,
-                    )
-                }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text(
-                        rightLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSub,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        fmt(rightValue),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextMain,
-                    )
-                }
+            // 副栏：两个口径并排在同一行，标签和金额都同行显示（本月收入 512.25   月结余 -453.30）
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    leftLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSub,
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    fmt(leftValue),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextMain,
+                )
+                Spacer(Modifier.width(20.dp))
+                Text(
+                    rightLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSub,
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    fmt(rightValue),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextMain,
+                )
             }
 
             Spacer(Modifier.height(16.dp))
