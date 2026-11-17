@@ -1,6 +1,6 @@
 {
-  "versionCode": 13,
-  "versionName": "1.4.5",
-  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4.5/AutoLedger-v1.4.5.apk",
-  "note": "修复小组件加载失败、时间选择回退；日历支出栏恢复粉色"
+  "versionCode": 14,
+  "versionName": "1.4.6",
+  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4.6/AutoLedger-v1.4.6.apk",
+  "note": "修复时间/日期选择器选中项与高亮条错位一行的问题"
 }

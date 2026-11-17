@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,20 +38,17 @@ import java.time.YearMonth
 import kotlin.math.abs
 
 /**
- * 竖直滚轮选择器：手指滑动选值，松手自动吸附到最近的一项。
+ * 竖直滚轮选择器。
  *
- * 定位与回传设计（避免「时间回退」bug 的关键）：
- * - 视口显示 3 项，上下各留 1 项高度的 contentPadding，使第 0 项 / 最后一项也能滚到正中央；
- * - 用 `rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex - 1)` 初始化，
- *   让选中项一开始就居中（第 selectedIndex-1 项在视口顶部 -> 第 selectedIndex 项居中）；
- * - 中心项用 **viewport 相对坐标** 计算：`item.offset` 本来就是相对视口顶部的偏移，
- *   视口中心 = (viewportEndOffset - viewportStartOffset) / 2，两者相减才是正确距离。
- *   之前误用 (viewportStartOffset + viewportEndOffset)/2（content 坐标）和 viewport 坐标的
- *   item.offset 相减，导致中心项永远算错，选中值一路回退。
- * - 只在「滚动停止」时回传一次，杜绝滚动过程中的中间项被误回传。
- *
- * 这里做成「非受控」：外部 `selected` 仅作初始值，之后完全由滚轮自身滚动驱动。
- * 年月/时分各滚轮之间没有联动，非受控最简单也最不容易出错。
+ * 实现要点（修复「选中项与高亮条错位一行」与「时间回退」的关键）：
+ * - 不在 LazyColumn 上使用 contentPadding，改为在数据首尾各塞一个透明占位项（null）。
+ *   这样首尾的真实项也能滚到正中央，且 offset 坐标系简单清晰、无隐式偏移。
+ * - 初始定位：`rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)`，
+ *   让第 selectedIndex 个 display 项顶部对齐视口第 1 行，于是真实选中项（display 下标
+ *   = selectedIndex + half）正好落在第 2 行（视口中心）。
+ * - 中心项判定：视口中心 = viewportSize.height / 2（相对视口顶部），item.offset 同样
+ *   相对视口顶部，两者相减即可正确找到中心项（之前误用 viewportStartOffset 导致偏一行）。
+ * - 非受控：外部 selected 仅作初始值；滚动停止后（含慢速拖动）精确吸附并回传一次。
  */
 @Composable
 fun WheelPicker(
@@ -65,42 +61,61 @@ fun WheelPicker(
 ) {
     if (items.isEmpty()) return
     val itemHeightDp = itemHeight.dp
+    val viewportItemCount = 3
+    val half = viewportItemCount / 2
+
     val selectedIndex = items.indexOf(selected).coerceIn(0, items.lastIndex)
 
-    // 初始化定位：让选中项居中（-1 项在视口顶部）
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = (selectedIndex - 1).coerceAtLeast(0)
-    )
-    val fling = rememberSnapFlingBehavior(lazyListState = listState)
+    // 首尾各加 half 个占位项（null），保证首尾真实项也能居中
+    val displayItems: List<Int?> = remember(items) {
+        buildList {
+            repeat(half) { add(null) }
+            items.forEach { add(it) }
+            repeat(half) { add(null) }
+        }
+    }
 
-    // 中心项：视口相对坐标正确计算
-    val centerIndex by remember {
+    // 初始定位：displayItems[selectedIndex] 顶部在第 1 行，
+    // 真实选中项在 display 下标 selectedIndex + half（第 2 行，视口中心）
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+    val fling = rememberSnapFlingBehavior(listState)
+
+    // 中心项（display 下标）
+    val centerDisplayIndex by remember {
         derivedStateOf {
             val info = listState.layoutInfo
-            if (info.visibleItemsInfo.isEmpty()) selectedIndex
+            if (info.visibleItemsInfo.isEmpty()) selectedIndex + half
             else {
-                val viewportCenter = (info.viewportEndOffset - info.viewportStartOffset) / 2f
+                val center = info.viewportSize.height / 2f
                 info.visibleItemsInfo.minByOrNull {
-                    abs((it.offset + it.size / 2f) - viewportCenter)
-                }?.index ?: selectedIndex
+                    abs(it.offset + it.size / 2f - center)
+                }?.index ?: (selectedIndex + half)
             }
         }
     }
 
-    // 只在滚动停止后回传一次；程序不主动 scrollToItem，因此 isScrollInProgress 只由用户手势触发
+    // 滚动停止后：精确吸附到中心项，并回传真实值
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }
             .collect { inProgress ->
                 if (!inProgress) {
-                    items.getOrNull(centerIndex)?.let { v ->
-                        if (v != selected) onSelected(v)
+                    val realIndex = centerDisplayIndex - half
+                    if (realIndex in items.indices) {
+                        // 慢速拖动松手时可能未对齐，手动吸附一次
+                        if (listState.firstVisibleItemIndex != realIndex ||
+                            listState.firstVisibleItemScrollOffset != 0
+                        ) {
+                            listState.scrollToItem(realIndex, 0)
+                        }
+                        items.getOrNull(realIndex)?.let { v ->
+                            if (v != selected) onSelected(v)
+                        }
                     }
                 }
             }
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        // 中心高亮条
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.82f)
@@ -113,24 +128,25 @@ fun WheelPicker(
             flingBehavior = fling,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(itemHeightDp * 3),
-            contentPadding = PaddingValues(vertical = itemHeightDp),
+                .height(itemHeightDp * viewportItemCount),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            itemsIndexed(items) { i, value ->
-                val isCenter = i == centerIndex
+            itemsIndexed(displayItems) { i, value ->
+                val isCenter = i == centerDisplayIndex
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(itemHeightDp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        format(value),
-                        fontSize = if (isCenter) 22.sp else 16.sp,
-                        fontWeight = if (isCenter) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isCenter) TextMain else TextSub,
-                    )
+                    if (value != null) {
+                        Text(
+                            format(value),
+                            fontSize = if (isCenter) 22.sp else 16.sp,
+                            fontWeight = if (isCenter) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCenter) TextMain else TextSub,
+                        )
+                    }
                 }
             }
         }
@@ -149,6 +165,9 @@ fun MonthPickerDialog(
     var year by remember { mutableIntStateOf(initial.year.coerceIn(minYear, max.year)) }
     var month by remember { mutableIntStateOf(initial.monthValue) }
 
+    val years = remember(minYear, max) { (minYear..max.year).toList() }
+    val months = remember { (1..12).toList() }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("选择月份") },
@@ -159,7 +178,7 @@ fun MonthPickerDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 WheelPicker(
-                    items = (minYear..max.year).toList(),
+                    items = years,
                     selected = year,
                     onSelected = { year = it },
                     modifier = Modifier.weight(1f),
@@ -169,7 +188,7 @@ fun MonthPickerDialog(
                 Text("年", style = MaterialTheme.typography.titleMedium, color = TextMain)
                 Spacer(Modifier.width(12.dp))
                 WheelPicker(
-                    items = (1..12).toList(),
+                    items = months,
                     selected = month,
                     onSelected = { month = it },
                     modifier = Modifier.weight(1f),
