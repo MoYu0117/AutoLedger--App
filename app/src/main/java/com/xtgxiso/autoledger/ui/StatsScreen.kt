@@ -638,14 +638,14 @@ private fun DayCell(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    // 背景色：三栏统一规则
-    // - 默认 B 色（淡绿）
-    // - 有数据 A 色（深一点的绿）
-    // - 选中 -> 淡黄色
+    // 背景色：
+    // - 支出栏（metric 0）：默认淡粉、有支出深粉
+    // - 收入栏（metric 1）/ 结余栏（metric 2）：默认淡绿、有数据深绿
+    // - 选中 -> 淡黄色（三栏统一）
     val bg = when {
         selected -> Color(0xFFFDF2C8)          // 选中：淡黄
-        hasValue -> Color(0xFFB9E3C6)          // A 色：有数据（深绿）
-        else -> Color(0xFFE8F5EC)              // B 色：默认（淡绿）
+        metric == 0 -> if (hasValue) Color(0xFFF7D7D7) else Color(0xFFFBE9E9) // 支出：深粉/淡粉
+        else -> if (hasValue) Color(0xFFB9E3C6) else Color(0xFFE8F5EC)        // 收入/结余：深绿/淡绿
     }
     Surface(
         color = bg,

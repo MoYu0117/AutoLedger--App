@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,12 +41,18 @@ import kotlin.math.abs
 /**
  * 竖直滚轮选择器：手指滑动选值，松手自动吸附到最近的一项。
  *
- * 实现要点（关键，避免「时间回退」bug）：
- * - 视口显示 3 项，上下各留 1 项高度的 contentPadding，使第 0 项/最后一项也能滚到正中央；
- * - 选中项 = 中心最接近视口中线的那一项（用 layoutInfo 算）；
- * - **外部 selected 变化时用 LaunchedEffect 重新定位**，但用「snapshotFlow 快照」在
- *   scrollToItem 之后、滚动稳定后才回传选中值，杜绝「scroll 过程中 centerIndex 抖动、
- *   把 selected 一路回调到最小值」的回退问题。
+ * 定位与回传设计（避免「时间回退」bug 的关键）：
+ * - 视口显示 3 项，上下各留 1 项高度的 contentPadding，使第 0 项 / 最后一项也能滚到正中央；
+ * - 用 `rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex - 1)` 初始化，
+ *   让选中项一开始就居中（第 selectedIndex-1 项在视口顶部 -> 第 selectedIndex 项居中）；
+ * - 中心项用 **viewport 相对坐标** 计算：`item.offset` 本来就是相对视口顶部的偏移，
+ *   视口中心 = (viewportEndOffset - viewportStartOffset) / 2，两者相减才是正确距离。
+ *   之前误用 (viewportStartOffset + viewportEndOffset)/2（content 坐标）和 viewport 坐标的
+ *   item.offset 相减，导致中心项永远算错，选中值一路回退。
+ * - 只在「滚动停止」时回传一次，杜绝滚动过程中的中间项被误回传。
+ *
+ * 这里做成「非受控」：外部 `selected` 仅作初始值，之后完全由滚轮自身滚动驱动。
+ * 年月/时分各滚轮之间没有联动，非受控最简单也最不容易出错。
  */
 @Composable
 fun WheelPicker(
@@ -60,38 +67,36 @@ fun WheelPicker(
     val itemHeightDp = itemHeight.dp
     val selectedIndex = items.indexOf(selected).coerceIn(0, items.lastIndex)
 
-    // 初始化时直接把列表定位到选中项（-1 使该项居中），之后外部 selected 变化时再 scroll
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (selectedIndex - 1).coerceAtLeast(0))
+    // 初始化定位：让选中项居中（-1 项在视口顶部）
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = (selectedIndex - 1).coerceAtLeast(0)
+    )
     val fling = rememberSnapFlingBehavior(lazyListState = listState)
 
-    // 外部 selected 变化 -> 重新定位滚轮。滚动稳定后（帧之后）才同步回传，避免抖动回退。
-    LaunchedEffect(selectedIndex) {
-        val target = (selectedIndex - 1).coerceAtLeast(0)
-        // 只有真正需要移动才 scroll，避免无谓的滚动触发 centerIndex 抖动
-        if (listState.firstVisibleItemIndex != target) {
-            listState.scrollToItem(target)
-        }
-    }
-
-    // 中心项：视口中线附近最接近的那一项
+    // 中心项：视口相对坐标正确计算
     val centerIndex by remember {
         derivedStateOf {
             val info = listState.layoutInfo
             if (info.visibleItemsInfo.isEmpty()) selectedIndex
             else {
-                val center = (info.viewportStartOffset + info.viewportEndOffset) / 2f
+                val viewportCenter = (info.viewportEndOffset - info.viewportStartOffset) / 2f
                 info.visibleItemsInfo.minByOrNull {
-                    abs((it.offset + it.size / 2f) - center)
+                    abs((it.offset + it.size / 2f) - viewportCenter)
                 }?.index ?: selectedIndex
             }
         }
     }
 
-    // 仅当中心项对应的「值」和外部 selected 不一致时才回传。
-    // 用值比较（而非 index），彻底避免「scroll 过程中中间态触发 onSelected 把值改小」。
-    LaunchedEffect(centerIndex) {
-        val value = items.getOrNull(centerIndex) ?: return@LaunchedEffect
-        if (value != selected) onSelected(value)
+    // 只在滚动停止后回传一次；程序不主动 scrollToItem，因此 isScrollInProgress 只由用户手势触发
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .collect { inProgress ->
+                if (!inProgress) {
+                    items.getOrNull(centerIndex)?.let { v ->
+                        if (v != selected) onSelected(v)
+                    }
+                }
+            }
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
