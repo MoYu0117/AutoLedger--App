@@ -1,6 +1,6 @@
 {
-  "versionCode": 11,
-  "versionName": "1.4.3",
-  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4.3/AutoLedger-v1.4.3.apk",
-  "note": "修复检查更新源，统一走 Gitee main 分支"
+  "versionCode": 12,
+  "versionName": "1.4.4",
+  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4.4/AutoLedger-v1.4.4.apk",
+  "note": "修复小组件报错、时间回退、编辑后数据不更新；日历配色调整"
 }

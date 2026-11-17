@@ -62,6 +62,7 @@ import com.xtgxiso.autoledger.util.Dates
 import com.xtgxiso.autoledger.util.Money
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 
@@ -69,7 +70,10 @@ import java.time.ZoneOffset
  * 记一笔 / 编辑一条。
  *
  * 布局照着常用记账 App 来：上方分类图标网格，底部自绘数字键盘（不弹系统输入法）。
- * 键盘上的「-」「+」是切换支出/收入，和主流记账 App 的手感一致。
+ * 键盘上的「-」「+」是切换支出/收入。
+ *
+ * 编辑模式（initial != null）正确回显：金额、分类、收支方向、商户/备注、日期时间。
+ * 保存时所有字段写回，账单列表实时刷新（Room Flow 自动推送）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,11 +83,22 @@ fun EditScreen(
     onSave: (Transaction) -> Unit,
     onDelete: (Transaction) -> Unit,
 ) {
+    val editing = initial != null
+
+    // 金额：编辑时回显原金额
     var amount by remember {
         mutableStateOf(initial?.let { Money.centsToYuan(it.amountCents) }?.takeIf { it != "0.00" } ?: "")
     }
     var isExpense by remember { mutableStateOf(initial?.isExpense ?: true) }
-    var note by remember { mutableStateOf(initial?.note.orEmpty()) }
+    // 商户/备注：编辑时优先回显「备注」，没有备注才回显商户名，便于用户直接改
+    var payee by remember {
+        mutableStateOf(
+            when {
+                !initial?.note.isNullOrBlank() -> initial!!.note
+                else -> initial?.payee.orEmpty()
+            }
+        )
+    }
     var category by remember {
         mutableStateOf(initial?.category ?: Categories.expense.first())
     }
@@ -127,23 +142,25 @@ fun EditScreen(
         if (!valid) return
         // 不允许记未来账：时间超出当前时刻就压回到现在
         val safeTime = minOf(timeMillis, System.currentTimeMillis())
+        // 商户名 = 用户填的内容（空则回退分类名）；note 单独存用户备注
+        val payeeFinal = payee.trim().ifBlank { category }
         onSave(
             Transaction(
                 id = initial?.id ?: 0L,
                 amountCents = cents,
                 isExpense = isExpense,
-                payee = initial?.payee ?: note.ifBlank { category },
+                payee = payeeFinal,
                 category = category,
                 time = safeTime,
                 source = initial?.source ?: Transaction.SOURCE_MANUAL,
                 rawText = initial?.rawText.orEmpty(),
-                note = note,
+                note = if (editing) payee.trim() else "", // 编辑时把商户名也当备注展示在第二行
                 status = Transaction.CONFIRMED,
             )
         )
         if (keepOpen) {
             amount = ""
-            note = ""
+            payee = ""
         }
     }
 
@@ -152,7 +169,7 @@ fun EditScreen(
             .fillMaxSize()
             .background(PageBg)
     ) {
-        // ——— 顶部：只保留 支出 / 收入 ———
+        // ——— 顶部：返回 + 支出/收入切换 + 删除 ———
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -163,20 +180,52 @@ fun EditScreen(
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "返回", tint = TextMain)
             }
-            SegmentedTabs(
-                options = listOf("支出", "收入"),
-                selected = if (isExpense) 0 else 1,
-                onSelect = { index ->
-                    isExpense = index == 0
-                    category = if (isExpense) Categories.expense.first() else Categories.income.first()
-                },
+            Text(
+                if (editing) "编辑账单" else "记一笔",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextMain,
+                modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.weight(1f))
-            if (initial != null) {
+            if (editing) {
                 IconButton(onClick = { showDeleteConfirm = true }) {
                     Icon(Icons.Default.Delete, contentDescription = "删除", tint = TextSub)
                 }
             }
+        }
+
+        // ——— 收支方向 + 金额（大标题区） ———
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (isExpense) "支出" else "收入",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = accent,
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "¥ " + if (amount.isEmpty()) "0.00" else amount,
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accent,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+
+            // 收支方向切换
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                DirectionChip("支出", isExpense, ExpenseColor) { isExpense = true }
+                DirectionChip("收入", !isExpense, IncomeColor) { isExpense = false }
+            }
+            Spacer(Modifier.height(12.dp))
         }
 
         // ——— 分类网格 ———
@@ -186,6 +235,11 @@ fun EditScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 14.dp),
         ) {
+            Text(
+                "分类",
+                style = MaterialTheme.typography.labelMedium,
+                color = TextSub,
+            )
             Spacer(Modifier.height(6.dp))
             categories.chunked(5).forEach { rowItems ->
                 Row(
@@ -208,31 +262,37 @@ fun EditScreen(
             Spacer(Modifier.height(10.dp))
         }
 
-        // ——— 备注 + 日期 + 金额 ———
+        // ——— 商户/备注 + 日期 + 时间 ———
         Surface(
             color = Color.White,
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                // 商户/备注输入
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "备注",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSub,
+                    )
+                    Spacer(Modifier.width(10.dp))
                     Box(
                         Modifier
                             .weight(1f)
-                            .height(44.dp),
+                            .height(40.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) {
-                        if (note.isEmpty()) {
+                        if (payee.isEmpty()) {
                             Text(
-                                initial?.payee?.takeIf { it.isNotBlank() && it != "未识别商户" }
-                                    ?: "请输入备注信息（最多150字）",
+                                "商户 / 备注",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TextSub,
                             )
                         }
                         BasicTextField(
-                            value = note,
-                            onValueChange = { if (it.length <= 150) note = it },
+                            value = payee,
+                            onValueChange = { if (it.length <= 50) payee = it },
                             textStyle = TextStyle(
                                 color = TextMain,
                                 fontSize = 15.sp,
@@ -241,7 +301,17 @@ fun EditScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    Spacer(Modifier.width(8.dp))
+                }
+                Spacer(Modifier.height(8.dp))
+
+                // 日期 + 时间
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "日期",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSub,
+                    )
+                    Spacer(Modifier.width(10.dp))
                     Surface(
                         color = MintSoft,
                         shape = RoundedCornerShape(8.dp),
@@ -251,10 +321,16 @@ fun EditScreen(
                             Dates.monthDay(timeMillis),
                             style = MaterialTheme.typography.labelLarge,
                             color = Mint,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
                     }
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        "时间",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextSub,
+                    )
+                    Spacer(Modifier.width(10.dp))
                     Surface(
                         color = MintSoft,
                         shape = RoundedCornerShape(8.dp),
@@ -264,16 +340,9 @@ fun EditScreen(
                             Dates.hm(timeMillis),
                             style = MaterialTheme.typography.labelLarge,
                             color = Mint,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
                     }
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        "¥ " + if (amount.isEmpty()) "0.00" else amount,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = accent,
-                    )
                 }
             }
         }
@@ -313,7 +382,7 @@ fun EditScreen(
                     Key("0", Modifier.weight(1f)) { pressKey("0") }
                     Key(".", Modifier.weight(1f)) { pressKey(".") }
                     Key(
-                        "保存",
+                        if (editing) "保存" else "保存",
                         Modifier.weight(1f),
                         primary = true,
                         enabled = valid,
@@ -398,7 +467,7 @@ fun EditScreen(
         )
     }
 
-    if (showDeleteConfirm && initial != null) {
+    if (showDeleteConfirm && editing) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text("删除这条记录？") },
@@ -406,7 +475,7 @@ fun EditScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
-                    onDelete(initial)
+                    onDelete(initial!!)
                 }) { Text("删除", color = ExpenseColor) }
             },
             dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("取消") } },
@@ -451,6 +520,22 @@ private fun CategoryCell(
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = if (selected) Mint else TextMain,
             textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun DirectionChip(label: String, selected: Boolean, color: Color, onClick: () -> Unit) {
+    Surface(
+        color = if (selected) color.copy(alpha = 0.15f) else MintSoft,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) color else TextSub,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
         )
     }
 }

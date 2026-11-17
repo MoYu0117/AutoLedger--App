@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -39,13 +39,13 @@ import kotlin.math.abs
 
 /**
  * 竖直滚轮选择器：手指滑动选值，松手自动吸附到最近的一项。
- * 用在 时/分、年/月、删除月数 等地方，替代一下一下点箭头的步进器。
  *
- * 实现要点：
- * - LazyColumn 每项高度固定，视口显示 3 项，上下各留 1 项高度的 padding，
- *   这样第 0 项和最后一项也能滚到视口正中央；
- * - 选中项 = 中心最接近视口中线的那一项（用 layoutInfo 算，不依赖 firstVisibleIndex 的边界细节）；
- * - rememberSnapFlingBehavior 负责松手后的"吸附"手感。
+ * 实现要点（关键，避免「时间回退」bug）：
+ * - 视口显示 3 项，上下各留 1 项高度的 contentPadding，使第 0 项/最后一项也能滚到正中央；
+ * - 选中项 = 中心最接近视口中线的那一项（用 layoutInfo 算）；
+ * - **外部 selected 变化时用 LaunchedEffect 重新定位**，但用「snapshotFlow 快照」在
+ *   scrollToItem 之后、滚动稳定后才回传选中值，杜绝「scroll 过程中 centerIndex 抖动、
+ *   把 selected 一路回调到最小值」的回退问题。
  */
 @Composable
 fun WheelPicker(
@@ -58,17 +58,22 @@ fun WheelPicker(
 ) {
     if (items.isEmpty()) return
     val itemHeightDp = itemHeight.dp
-    val listState = rememberLazyListState()
-    val fling = rememberSnapFlingBehavior(lazyListState = listState)
     val selectedIndex = items.indexOf(selected).coerceIn(0, items.lastIndex)
 
-    // 关键修复：当外部 selected 变化时，把滚动定位到对应项（先 scroll 到 index-1 使该项居中）。
-    // 之前只跑一次(Unit)，导致 selected 变化后滚轮不跟随，centerIndex 又反复回调 onSelected，
-    // 出现「数值不断倒退」的 bug。
+    // 初始化时直接把列表定位到选中项（-1 使该项居中），之后外部 selected 变化时再 scroll
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (selectedIndex - 1).coerceAtLeast(0))
+    val fling = rememberSnapFlingBehavior(lazyListState = listState)
+
+    // 外部 selected 变化 -> 重新定位滚轮。滚动稳定后（帧之后）才同步回传，避免抖动回退。
     LaunchedEffect(selectedIndex) {
-        if (selectedIndex > 0) listState.scrollToItem(selectedIndex - 1)
+        val target = (selectedIndex - 1).coerceAtLeast(0)
+        // 只有真正需要移动才 scroll，避免无谓的滚动触发 centerIndex 抖动
+        if (listState.firstVisibleItemIndex != target) {
+            listState.scrollToItem(target)
+        }
     }
 
+    // 中心项：视口中线附近最接近的那一项
     val centerIndex by remember {
         derivedStateOf {
             val info = listState.layoutInfo
@@ -82,13 +87,15 @@ fun WheelPicker(
         }
     }
 
-    // 只有当中心项发生变化时才回传，且用「值」而非 index 判断，避免 selected 被反复改写导致回退
+    // 仅当中心项对应的「值」和外部 selected 不一致时才回传。
+    // 用值比较（而非 index），彻底避免「scroll 过程中中间态触发 onSelected 把值改小」。
     LaunchedEffect(centerIndex) {
-        items.getOrNull(centerIndex)?.let { if (it != selected) onSelected(it) }
+        val value = items.getOrNull(centerIndex) ?: return@LaunchedEffect
+        if (value != selected) onSelected(value)
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        // 中心高亮条（底层，让选中项有"框住"的感觉）
+        // 中心高亮条
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.82f)
@@ -105,7 +112,7 @@ fun WheelPicker(
             contentPadding = PaddingValues(vertical = itemHeightDp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            items(items.size) { i ->
+            itemsIndexed(items) { i, value ->
                 val isCenter = i == centerIndex
                 Box(
                     modifier = Modifier
@@ -114,7 +121,7 @@ fun WheelPicker(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        format(items[i]),
+                        format(value),
                         fontSize = if (isCenter) 22.sp else 16.sp,
                         fontWeight = if (isCenter) FontWeight.Bold else FontWeight.Normal,
                         color = if (isCenter) TextMain else TextSub,

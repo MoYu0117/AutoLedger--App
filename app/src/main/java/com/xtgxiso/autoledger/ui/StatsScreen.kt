@@ -638,12 +638,14 @@ private fun DayCell(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    // 背景色：支出栏淡粉、有数据加深；收入栏默认透明、有数据淡色加深；结余栏始终不变
+    // 背景色：三栏统一规则
+    // - 默认 B 色（淡绿）
+    // - 有数据 A 色（深一点的绿）
+    // - 选中 -> 淡黄色
     val bg = when {
-        selected -> Mint
-        metric == 0 -> if (hasValue) Color(0xFFF7D7D7) else Color(0xFFFBE9E9) // 支出：淡粉
-        metric == 1 -> if (hasValue) Color(0xFFD7F0E3) else Color.Transparent   // 收入：有数据淡绿
-        else -> Color.Transparent                                              // 结余：不变
+        selected -> Color(0xFFFDF2C8)          // 选中：淡黄
+        hasValue -> Color(0xFFB9E3C6)          // A 色：有数据（深绿）
+        else -> Color(0xFFE8F5EC)              // B 色：默认（淡绿）
     }
     Surface(
         color = bg,
@@ -663,14 +665,14 @@ private fun DayCell(
             Text(
                 day.toString(),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Bold, // 日期始终粗体
-                color = if (selected) Color.White else TextMain,
+                fontWeight = FontWeight.Bold, // 日期始终粗体
+                color = TextMain,
             )
             if (label.isNotEmpty()) {
                 Text(
                     label,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (selected) Color.White else TextMain, // 金额始终黑色（非粗体）
+                    color = TextMain, // 金额始终黑色（非粗体）
                     fontWeight = FontWeight.Normal,
                     maxLines = 1,
                 )
