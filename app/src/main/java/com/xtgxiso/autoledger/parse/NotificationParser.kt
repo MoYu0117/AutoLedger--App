@@ -27,13 +27,20 @@ object NotificationParser {
     const val SOURCE_ALIPAY = "com.eg.android.AlipayGphone"
 
     /** 这些标题太泛，不能当商户名 */
-    private val genericTitles = setOf("支付宝", "微信支付", "微信", "WeChat", "支付通知", "服务通知")
+    private val genericTitles = setOf(
+        "支付宝", "微信支付", "微信", "WeChat", "支付通知", "服务通知",
+        "交易提醒", "交易通知", "花呗",
+    )
 
     /**
      * 标题里出现这些，才被认为是「微信支付 / 支付宝」的官方支付通知，
      * 而不是微信好友发来的普通聊天消息（那种标题是对方昵称，会误记成假账单）。
      */
-    private val paymentServiceTitles = listOf("微信支付", "支付宝", "支付成功", "收款", "付款", "账单", "消费")
+    private val paymentServiceTitles = listOf(
+        "微信支付", "支付宝", "支付成功", "收款", "付款", "账单", "消费",
+        // 支付宝「交易提醒」类通知（花呗/余额/银行卡支出）的标题关键词
+        "交易提醒", "交易通知", "花呗", "余额", "到账", "入账", "退款",
+    )
 
     /** 金额写法，按优先级匹配（¥ 符号最可靠，其次 "xx元"，最后是"支出 25.8" 这种） */
     private val amountPatterns: List<Pair<String, Regex>> = listOf(

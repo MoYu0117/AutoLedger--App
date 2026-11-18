@@ -1,6 +1,6 @@
 {
-  "versionCode": 14,
-  "versionName": "1.4.6",
-  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4.6/AutoLedger-v1.4.6.apk",
-  "note": "修复时间/日期选择器选中项与高亮条错位一行的问题"
+  "versionCode": 15,
+  "versionName": "1.4.7",
+  "downloadUrl": "https://gitee.com/mouyu-gitee/zidongjizhanganzhuoapp/releases/download/v1.4.7/AutoLedger-v1.4.7.apk",
+  "note": "新增识别支付宝「交易提醒」类通知（花呗/余额/银行卡支出等）"
 }
